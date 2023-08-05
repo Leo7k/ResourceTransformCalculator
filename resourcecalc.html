@@ -1,0 +1,40 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+button, label, input, details > div {
+	margin-left: 20px;
+}
+
+fieldset, div[inputType="resourcesElement"] {
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+div[inputType="resourceElement"] {
+	margin-top: 5px;
+}
+</style>
+</head>
+<body>
+<form>
+<fieldset>
+<legend>Собственные ресурсы и потребности</legend>
+<label>Загрузить данные о собственных ресурсах из файла: <input type="file" name="ownResourcesFile" accept="application/json" onchange="return onOwnResourcesFileSelected(event);"></label>
+<div id="myResources"></div>
+<button type="button" onclick="return addOwnResource(event);">Добавить</button>
+</fieldset>
+<fieldset>
+<legend>Точки обмена / преобразования</legend>
+<label>Загрузить описание точек обмена / преобразования из файла: <input type="file" name="transformPointsFile" accept="application/json" onchange="return onTransformPointsFileSelected(event);"></label>
+<div id="transformPointsList"></div>
+<button type="button" onclick="return addTransformPointsList(event);">Добавить точку обмена / преобразования</button>
+</fieldset>
+<button type="button" onclick="return fillInAndCalculate(event);">Рассчитать цепочки обмена / преобразования</button>
+</form>
+<br/>
+<div>Результаты расчёта:</div>
+<div id="results"></div>
+<script src="resourcecalc.js" async="false"></script>
+</body>
+</html>
