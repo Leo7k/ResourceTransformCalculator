@@ -30,11 +30,14 @@ div[inputType="resourceElement"] {
 <div id="transformPointsList"></div>
 <button type="button" onclick="return addTransformPointsList(event);">Добавить точку обмена / преобразования</button>
 </fieldset>
+<label>Максимальная длина цепочки преобразования: <input type="number" min="1" max="1000" step="1" name="chainLengthCutoff" id="chainLengthCutoff" value="10"/></label>
 <button type="button" onclick="return fillInAndCalculate(event);">Рассчитать цепочки обмена / преобразования</button>
 </form>
 <br/>
 <div>Результаты расчёта:</div>
 <div id="results"></div>
-<script src="resourcecalc.js" async="false"></script>
+<script src="resourcecalc_model.js" async="false"></script>
+<script src="resourcecalc_logic.js" async="false"></script>
+<script src="resourcecalc_ui.js" async="false"></script>
 </body>
 </html>
