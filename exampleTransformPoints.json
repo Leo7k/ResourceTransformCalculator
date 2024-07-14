@@ -1,14 +1,23 @@
 {
 	"tp1": {
+		"transform": {
 			"res_A": 1,
 			"res_C": -4
+		},
+		"canTransform": true
 	},
 	"tp2": {
+		"transform": {
 			"res_C": 1,
 			"res_D": -2
+		},
+		"canTransform": true
 	},
 	"tp3": {
+		"transform": {
 			"res_D": 1,
 			"res_B": -1
+		},
+		"canTransform": true
 	}
 }

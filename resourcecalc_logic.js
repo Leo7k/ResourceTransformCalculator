@@ -1,15 +1,22 @@
 let resourceCalculationInProgress = {};
 let transformChains = {};
-
-function clearAll() {
+let useTpResourcesFirst = true;
+function logicClearAll() {
 	resourceCalculationInProgress = {};
 	transformChains = {};
+	modelClearAll();
 }
 
 function copyKeyValueTable(originalTable) {
 	let copyOfTable = {};
 	for (let k in originalTable) {
-		copyOfTable[k] = originalTable[k];
+		let value = originalTable[k];
+		if (typeof(value) == "object") {
+			copyOfTable[k] = copyKeyValueTable(originalTable[k]);
+		}
+		else {
+			copyOfTable[k] = originalTable[k];
+		}
 	}
 	return copyOfTable;
 }
@@ -22,9 +29,23 @@ function logicUpdateTransformPoints(transformPoints) {
 	return modelSetTransformPoints(transformPoints);
 }
 
-function logicSetTransformPointResourcesCount(transformPointName, resourceName, count) {
-	return modelSetTransformPointResourcesCount(transformPointName, resourceName, count);
+function logicSetTransformPointTransformResourcesCount(transformPointName, resourceName, count) {
+	return modelSetTransformPointTransformResourcesCount(transformPointName, resourceName, count);
 }
+
+function logicSetTransformPointOwnResourcesCount(transformPointName, resourceName, count) {
+	return modelSetTransformPointOwnResourcesCount(transformPointName, resourceName, count);
+}
+
+
+function logicSetTransformPointCanTransform(transformPointName, canTransform) {
+	return modelSetTransformPointCanTransform(transformPointName, canTransform);
+}
+
+function logicSetTransformPointCanExchange(transformPointName, canExchange) {
+	return modelSetTransformPointCanExchange(transformPointName, canExchange);
+}
+
 
 function logicGetOwnResources() {
 	return modelGetOwnResources();
@@ -42,53 +63,111 @@ function calculateTransformChains(chainLengthCutoffLimit) {
 	resourceCalculationInProgress = {};
 	transformChains = {};
 	let chainsForResource = {};
-	let ownResources = logicGetOwnResources();
-	for (let resourceName in ownResources) {
-		let ownResourceCount = ownResources[resourceName];
+	let resourcesState = {
+		own: copyKeyValueTable(logicGetOwnResources()),
+		transformPoints: logicGetTransformPoints()
+	}
+	for (let resourceName in resourcesState.own) {
+		let ownResourceCount = resourcesState.own[resourceName];
 		if (ownResourceCount < 0) {
-			chainsForResource[resourceName] = getTransformChainsForResource(resourceName, ownResources, -ownResourceCount, chainLengthCutoffLimit);
+			chainsForResource[resourceName] = getTransformChainsForResource(resourceName, resourcesState, chainLengthCutoffLimit);
+			//break;
 		}
 	}
 	return chainsForResource;
 }
 
-function getTransformChainsForResource(resourceName, currentStateResources, requiredCount, chainLengthCutoffLimit) {
+function getTransformChainsForResource(resourceName, currentStateResources, chainLengthCutoffLimit) {
 	let transformChain = [];
 	if (resourceCalculationInProgress[resourceName]) {
-		print(`Resource ${resourceName} calculation already in progress: ${requiredCount}`);
+		print(`Resource ${resourceName} calculation already in progress`);
 		return transformChain;
 	}
 	if (chainLengthCutoffLimit < 1) {
 		print(`Resource chain limit reached`);
 		return transformChain;
 	}
-	//print(currentStateResources);
 	resourceCalculationInProgress[resourceName] = true;
-	print(`Resource ${resourceName} calculation started, required count: ${requiredCount}`);
+	print(`Resource ${resourceName} calculation started`);
 	let transformPoints = logicGetTransformPoints();
 	for (let tpoint in transformPoints) {
-		print(`Transform point ${tpoint} calculation start ${resourceName}, ${transformPoints[tpoint][resourceName]}`);
-		if ((transformPoints[tpoint][resourceName] != null) && (transformPoints[tpoint][resourceName] > 0)) {
+		let transformPoint = transformPoints[tpoint];
+		let tpResourceTransformRules = null;
+		if (transformPoint.transform != null) {
+			print(`Transform point ${tpoint} calculation start ${resourceName}, ${transformPoint.transform[resourceName]}`);
+		}
+		if ((transformPoint.transform != null) && (transformPoint.transform[resourceName] != null) && (transformPoint.transform[resourceName] > 0)) {
+			tpResourceTransformRules = transformPoint.transform;
+		}
+		if (tpResourceTransformRules != null) {
 			let hasRequiredResources = true;
 			let subchainUsed = false;
 			let resourcesState = copyKeyValueTable(currentStateResources);
-			print(resourcesState);
-			for (let rresrc in transformPoints[tpoint]) {
-				if (resourcesState[rresrc]) {
-					resourcesState[rresrc] += transformPoints[tpoint][rresrc]*requiredCount;
-				}
-				else {
-					resourcesState[rresrc] = transformPoints[tpoint][rresrc]*requiredCount;
+			let tpExchangeResources = resourcesState.transformPoints[tpoint].resources || {};
+			let requiredCountMultiplier = 1;
+
+			for (let rresrc in tpResourceTransformRules) {
+				let currentOwnResourceCount = resourcesState.own[rresrc] || 0;
+				if ((currentOwnResourceCount < 0) && (tpResourceTransformRules[rresrc] != 0)) {
+					requiredCountMultiplier = Math.max(requiredCountMultiplier, Math.ceil(-currentOwnResourceCount/tpResourceTransformRules[rresrc]))
 				}
 			}
-			print(resourcesState);
-			for (let intermediateResourceName in transformPoints[tpoint]) {
-				//print(intermediateResourceName);
-				if (((transformPoints[tpoint][intermediateResourceName] < 0) && (currentStateResources[intermediateResourceName] === undefined)) || (currentStateResources[intermediateResourceName] < -transformPoints[tpoint][intermediateResourceName] * requiredCount)) {
-					let underlyingTransformChain = getTransformChainsForResource(intermediateResourceName, resourcesState, (-currentStateResources[intermediateResourceName] || 0) -requiredCount*transformPoints[tpoint][intermediateResourceName], chainLengthCutoffLimit -1);
+
+			print("Required resources count multiplier: "+requiredCountMultiplier);
+			let noTransformAfterExchange = false;
+			let tPointResourcesEnoughForExchange = false;
+			if (transformPoint.canExchange) {
+				noTransformAfterExchange = true;
+				tPointResourcesEnoughForExchange = true;
+				for (let rresrc in tpResourceTransformRules) {
+					let currentOwnResourceCount = resourcesState.own[rresrc] || 0;
+					let operationResourcesCount = tpResourceTransformRules[rresrc] * requiredCountMultiplier;
+					let tpExchangeResourcesCount = (tpExchangeResources[rresrc] || 0);
+					if (((tpExchangeResourcesCount >= 0) && ((tpExchangeResourcesCount - operationResourcesCount) >= 0) || (tpExchangeResourcesCount < 0) && ((tpExchangeResourcesCount - operationResourcesCount) >= tpExchangeResourcesCount))) {
+						if ((operationResourcesCount > 0) && ((currentOwnResourceCount + operationResourcesCount) < 0)) {
+							noTransformAfterExchange = false;
+						}
+					}
+					else {
+						tPointResourcesEnoughForExchange = false;
+					}
+				}
+				if (tPointResourcesEnoughForExchange) {
+					for (let rresrc in tpResourceTransformRules) {
+						let operationResourcesCount = tpResourceTransformRules[rresrc] * requiredCountMultiplier;
+						let currentOwnResourceCount = resourcesState.own[rresrc] || 0;
+						resourcesState.own[rresrc] = currentOwnResourceCount + operationResourcesCount;
+						resourcesState.transformPoints[tpoint].resources[rresrc] = (resourcesState.transformPoints[tpoint].resources[rresrc] || 0) - operationResourcesCount;
+					}					
+				}
+			}
+			if ((transformPoint.canTransform) && (!noTransformAfterExchange)) {
+				let tpResourcesUsedCount = {};
+				if (useTpResourcesFirst) {
+					for (let rresrc in tpResourceTransformRules) {
+						let currentOwnResourceCount = resourcesState.own[rresrc] || 0;
+						let currentTpResourceCount = tpExchangeResources[rresrc] || 0;
+						if ((tpResourceTransformRules[rresrc] < 0) && (currentTpResourceCount > 0)) {
+							tpResourcesUsedCount[rresrc] = -Math.min(currentTpResourceCount, tpResourceTransformRules[rresrc] * requiredCountMultiplier);
+							tpExchangeResources[rresrc] = currentTpResourceCount - tpResourcesUsedCount[rresrc];
+							resourcesState.own[rresrc] = currentOwnResourceCount + tpResourcesUsedCount[rresrc];
+						}
+					}
+				}
+
+				for (let rresrc in tpResourceTransformRules) {
+					let currentOwnResourceCount = resourcesState.own[rresrc] || 0;
+					let currentTpResourceCount = tpExchangeResources[rresrc] || 0;
+					resourcesState.own[rresrc] = currentOwnResourceCount + tpResourceTransformRules[rresrc] * requiredCountMultiplier;
+				}
+			}
+			for (let intermediateResourceName in tpResourceTransformRules) {
+				let currentOwnResourceCount = resourcesState.own[intermediateResourceName] || 0;
+				if ((tpResourceTransformRules[intermediateResourceName] < 0) && (currentOwnResourceCount < 0)) {
+					let underlyingTransformChain = getTransformChainsForResource(intermediateResourceName, resourcesState, chainLengthCutoffLimit -1);
 					if (underlyingTransformChain.length > 0) {
-						print(`Lack of required resource ${intermediateResourceName} in transform point ${tpoint}, required: ${requiredCount*transformPoints[tpoint][intermediateResourceName]}, has: ${currentStateResources[intermediateResourceName]}. We need to go deeper...`);
-						underlyingTransformChain.unshift({type: "resource", name: resourceName, tpoint: tpoint, transformDescriptor: [transformPoints[tpoint]], resourcesStateInitial: currentStateResources, resourcesStateResult: resourcesState});
+						print(`Lack of required resource ${intermediateResourceName} in transform point ${tpoint}, required: ${requiredCountMultiplier*tpResourceTransformRules[intermediateResourceName]}, has: ${resourcesState.own[intermediateResourceName]}. We need to go deeper...`);
+						underlyingTransformChain.unshift({type: "resource", name: resourceName, tpoint: tpoint, transformDescriptor: [transformPoint], resourcesStateInitial: currentStateResources, resourcesStateResult: resourcesState});
 						transformChain.push({type: "chain", name: resourceName+"_chain", transformDescriptor: underlyingTransformChain});
 						subchainUsed = true;
 					}
@@ -99,11 +178,11 @@ function getTransformChainsForResource(resourceName, currentStateResources, requ
 					}
 				}
 				else {
-					print(`Enough resources of type ${intermediateResourceName} for ${resourceName}`);
+					print(`Enough resources of type ${intermediateResourceName} in transform point ${tpoint}, required: ${requiredCountMultiplier*tpResourceTransformRules[intermediateResourceName]}, has: ${currentStateResources.own[intermediateResourceName]}`);
 				}
 			}
-			if (hasRequiredResources && !subchainUsed) {
-				transformChain.push({type: "resource", name: resourceName, tpoint: tpoint, transformDescriptor: [transformPoints[tpoint]], resourcesStateInitial: currentStateResources, resourcesStateResult: resourcesState});
+			if (hasRequiredResources && !subchainUsed && (transformPoint.canTransform || tPointResourcesEnoughForExchange)) {
+				transformChain.push({type: "resource", name: resourceName, tpoint: tpoint, transformDescriptor: [transformPoint], resourcesStateInitial: currentStateResources, resourcesStateResult: resourcesState});
 			}
 		}
 	}
