@@ -1,3 +1,4 @@
+let model_resourceDefinitions = {};
 let model_resourceTransformPoints = {};
 let model_myOwnResources = {};
 
@@ -11,11 +12,27 @@ function modelGetTransformPoints() {
 	return model_resourceTransformPoints;
 }
 
+function modelGetResourceDefinitions() {
+	return model_resourceDefinitions;
+}
+
 function modelSetTransformPoints(transformPoints) {
 	if (transformPoints != null) {
 		model_resourceTransformPoints = transformPoints;
 	}
 }
+
+function modelSetResourceDefinition(resName, isInteger, displayName, additionalData) {
+	if (resName != null) {
+		if (model_resourceDefinitions[resName] == null) {
+			model_resourceDefinitions[resName] = {};
+		}
+		model_resourceDefinitions[resName].isInteger = (isInteger == true);
+		model_resourceDefinitions[resName].displayName = displayName;
+		model_resourceDefinitions[resName].additionalData = additionalData;
+	}
+}
+
 
 function modelSetTransformPointCanExchange(transformPointName, canExchange) {
 	if (transformPointName != null) {

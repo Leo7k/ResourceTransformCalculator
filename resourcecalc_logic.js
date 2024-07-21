@@ -7,6 +7,10 @@ function logicClearAll() {
 	modelClearAll();
 }
 
+function logicSetResourceDefinition(resName, isInteger, displayName, additionalData) {
+	return modelSetResourceDefinition(resName, isInteger, displayName, additionalData);
+}
+
 function copyKeyValueTable(originalTable) {
 	let copyOfTable = {};
 	for (let k in originalTable) {
@@ -19,6 +23,10 @@ function copyKeyValueTable(originalTable) {
 		}
 	}
 	return copyOfTable;
+}
+
+function logicGetResourceDefinitions() {
+	return modelGetResourceDefinitions();
 }
 
 function logicGetTransformPoints() {
@@ -66,7 +74,7 @@ function calculateTransformChains(chainLengthCutoffLimit) {
 	let resourcesState = {
 		own: copyKeyValueTable(logicGetOwnResources()),
 		transformPoints: logicGetTransformPoints()
-	}
+	};
 	for (let resourceName in resourcesState.own) {
 		let ownResourceCount = resourcesState.own[resourceName];
 		if (ownResourceCount < 0) {
@@ -90,6 +98,7 @@ function getTransformChainsForResource(resourceName, currentStateResources, chai
 	resourceCalculationInProgress[resourceName] = true;
 	print(`Resource ${resourceName} calculation started`);
 	let transformPoints = logicGetTransformPoints();
+	let definitions = logicGetResourceDefinitions();
 	for (let tpoint in transformPoints) {
 		let transformPoint = transformPoints[tpoint];
 		let tpResourceTransformRules = null;
@@ -104,16 +113,20 @@ function getTransformChainsForResource(resourceName, currentStateResources, chai
 			let subchainUsed = false;
 			let resourcesState = copyKeyValueTable(currentStateResources);
 			let tpExchangeResources = resourcesState.transformPoints[tpoint].resources || {};
+			let tpIntegerResourcesPresentInTransformRules = false;
 			let requiredCountMultiplier = 1;
-
 			for (let rresrc in tpResourceTransformRules) {
+				tpIntegerResourcesPresentInTransformRules = (definitions[rresrc].isInteger != false) || tpIntegerResourcesPresentInTransformRules;
 				let currentOwnResourceCount = resourcesState.own[rresrc] || 0;
+				let tpResourcesCount = tpResourceTransformRules[rresrc];
 				if ((currentOwnResourceCount < 0) && (tpResourceTransformRules[rresrc] != 0)) {
-					requiredCountMultiplier = Math.max(requiredCountMultiplier, Math.ceil(-currentOwnResourceCount/tpResourceTransformRules[rresrc]))
+					requiredCountMultiplier = Math.max(requiredCountMultiplier, -currentOwnResourceCount/tpResourcesCount);
 				}
 			}
-
-			print("Required resources count multiplier: "+requiredCountMultiplier);
+			if (tpIntegerResourcesPresentInTransformRules) {
+				requiredCountMultiplier = Math.ceil(requiredCountMultiplier);
+			}
+			print(`Required resources count multiplier: ${requiredCountMultiplier}`);
 			let noTransformAfterExchange = false;
 			let tPointResourcesEnoughForExchange = false;
 			if (transformPoint.canExchange) {
@@ -167,7 +180,7 @@ function getTransformChainsForResource(resourceName, currentStateResources, chai
 					let underlyingTransformChain = getTransformChainsForResource(intermediateResourceName, resourcesState, chainLengthCutoffLimit -1);
 					if (underlyingTransformChain.length > 0) {
 						print(`Lack of required resource ${intermediateResourceName} in transform point ${tpoint}, required: ${requiredCountMultiplier*tpResourceTransformRules[intermediateResourceName]}, has: ${resourcesState.own[intermediateResourceName]}. We need to go deeper...`);
-						underlyingTransformChain.unshift({type: "resource", name: resourceName, tpoint: tpoint, transformDescriptor: [transformPoint], resourcesStateInitial: currentStateResources, resourcesStateResult: resourcesState});
+						underlyingTransformChain.unshift({type: "resource", name: resourceName, tpoint: tpoint, multiplier: requiredCountMultiplier, transformDescriptor: [transformPoint], resourcesStateInitial: currentStateResources, resourcesStateResult: resourcesState});
 						transformChain.push({type: "chain", name: resourceName+"_chain", transformDescriptor: underlyingTransformChain});
 						subchainUsed = true;
 					}
@@ -182,7 +195,7 @@ function getTransformChainsForResource(resourceName, currentStateResources, chai
 				}
 			}
 			if (hasRequiredResources && !subchainUsed && (transformPoint.canTransform || tPointResourcesEnoughForExchange)) {
-				transformChain.push({type: "resource", name: resourceName, tpoint: tpoint, transformDescriptor: [transformPoint], resourcesStateInitial: currentStateResources, resourcesStateResult: resourcesState});
+				transformChain.push({type: "resource", name: resourceName, tpoint: tpoint, multiplier: requiredCountMultiplier, transformDescriptor: [transformPoint], resourcesStateInitial: currentStateResources, resourcesStateResult: resourcesState});
 			}
 		}
 	}

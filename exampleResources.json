@@ -1,0 +1,45 @@
+{
+	"definitions": {
+		"res_A": {
+			"displayName": "Ресурс A (то, что нужно получить)",
+			"isInteger": true
+		},
+		"res_B": {
+			"displayName": "Ресурс B"
+		},
+		"res_D": {
+			"displayName": "Ресурс D"
+		},
+		"res_C": {
+			"displayName": "Ресурс C (промежуточный)"
+		}
+	},
+	"own": {
+		"res_A": -2,
+		"res_B": 13,
+		"res_D": 3
+	},
+	"transformPoints": {
+		"tp1": {
+			"transform": {
+				"res_A": 1,
+				"res_C": -4
+			},
+			"canTransform": true
+		},
+		"tp2": {
+			"transform": {
+				"res_C": 1,
+				"res_D": -2
+			},
+			"canTransform": true
+		},
+		"tp3": {
+			"transform": {
+				"res_D": 1,
+				"res_B": -1
+			},
+			"canTransform": true
+		}
+	}
+}

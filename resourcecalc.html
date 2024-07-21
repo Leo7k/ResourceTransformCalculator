@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <style>
-button, label, input, details > div {
+button, label, input[type="text"], input[type="number"], details > div {
 	margin-left: 20px;
 }
 
@@ -41,19 +41,23 @@ div[inputType="resourceElement"] {
 <body>
 <form>
 <fieldset>
+<legend>Описание ресурсов</legend>
+<div id="resourcesDefinitions"></div>
+<button type="button" onclick="return addResourceDefinition(event);">Добавить</button>
+</fieldset>
+<fieldset>
 <legend>Собственные ресурсы и потребности</legend>
 <div id="myResources"></div>
 <button type="button" onclick="return addOwnResource(event);">Добавить</button>
-<br/>
-<label>Загрузить данные о собственных ресурсах из файла: <input type="file" name="ownResourcesFile" accept="application/json" onchange="return onOwnResourcesFileSelected(event);"></label>
 </fieldset>
 <fieldset>
 <legend>Точки обмена / преобразования</legend>
 <div id="transformPointsList"></div>
 <button type="button" onclick="return addTransformPointsList(event);">Добавить точку обмена / преобразования</button>
-<br/>
-<label>Загрузить описание точек обмена / преобразования из файла: <input type="file" name="transformPointsFile" accept="application/json" onchange="return onTransformPointsFileSelected(event);"></label>
 </fieldset>
+<br/>
+<div><label>Заполнить данные из сохраненного файла: <input type="file" name="resourcesStateFile" accept="application/json" onchange="return onResourcesStateFileSelected(event);"></label></div>
+<br/>
 <label>Максимальная длина цепочки преобразования: <input type="number" min="1" max="1000" step="1" name="chainLengthCutoff" id="chainLengthCutoff" value="10"/></label>
 <div><button type="button" onclick="return fillInAndCalculate(event);">Рассчитать цепочки обмена / преобразования</button></div>
 </form>
