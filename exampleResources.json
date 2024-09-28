@@ -21,25 +21,37 @@
 	},
 	"transformPoints": {
 		"tp1": {
-			"transform": {
-				"res_A": 1,
-				"res_C": -4
-			},
-			"canTransform": true
+			"transformRules": {
+				"main": {
+					"canTransform": true,
+					"transformRuleDescriptor": {
+						"res_A": 1,
+						"res_C": -4
+					}
+				}
+			}
 		},
 		"tp2": {
-			"transform": {
-				"res_C": 1,
-				"res_D": -2
-			},
-			"canTransform": true
+			"transformRules": {
+				"main": {
+					"canTransform": true,
+					"transformRuleDescriptor": {
+						"res_C": 1,
+						"res_D": -2
+					}
+				}
+			}
 		},
 		"tp3": {
-			"transform": {
-				"res_D": 1,
-				"res_B": -1
-			},
-			"canTransform": true
+			"transformRules": {
+				"main": {
+					"canTransform": true,
+					"transformRuleDescriptor": {
+						"res_D": 1,
+						"res_B": -1
+					}
+				}
+			}
 		}
 	}
 }

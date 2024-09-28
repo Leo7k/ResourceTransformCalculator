@@ -1,11 +1,9 @@
 "use strict";
-const print = console.log;
 const uiFormFieldsets = [
 "myResources",
 "transformPointsList",
 "resourcesDefinitions"
 ];
-
 
 function clearSrcDataFromUI() {
 	for (let i = 0; i < uiFormFieldsets.length; i++) {
@@ -28,7 +26,7 @@ function loadParsedResourcesState(resourcesState) {
 		addOwnResource(null, resourceName, ownResources[resourceName]);
 	}
 	for (let tpName in transformPoints) {
-		addTransformPointsList(null, tpName, transformPoints[tpName]);
+		addTransformPoint(null, tpName, transformPoints[tpName]);
 	}
 }
 
@@ -39,15 +37,35 @@ function onResourcesStateFileSelected(event) {
 	return true;
 }
 
-function addResourcesUIControls(parentToAdd, tpointName, tpoint) {
-	let buttonAddChildResource = document.createElement("button");
-	buttonAddChildResource.innerText = "Добавить ресурс";
-	buttonAddChildResource.type = "button";
-	buttonAddChildResource.onclick = addResource;
-	parentToAdd.appendChild(buttonAddChildResource);
+function addButtonUIControl(parentToAdd, eventHandlerOnClick, displayName) {
+	let buttonElement = document.createElement("button");
+	buttonElement.innerText = displayName;
+	buttonElement.type = "button";
+	buttonElement.onclick = eventHandlerOnClick;
+	parentToAdd.appendChild(buttonElement);
+	return buttonElement;
 }
 
-function addTransformRulesFromPoint(parentToAdd, tpointName, resourcesOrTransforms) {
+function addCheckboxUIControl(parentToAdd, type, name, displayName, defaultIsChecked) {
+	let label = document.createElement("label");
+	label.innerText = displayName;
+	let input = document.createElement("input");
+	input.type = "checkbox";
+	if (name) {
+		input.name = name;
+	}
+	if (type) {
+		input.setAttribute("inputType", type);
+	}
+	if ((defaultIsChecked === true) || (defaultIsChecked === false)) {
+		input.checked = defaultIsChecked;
+	}
+	label.appendChild(input);
+	parentToAdd.appendChild(label);
+	return label;
+}
+
+function addResourceListForElement(parentToAdd, resourcesOrTransforms) {
 	if (resourcesOrTransforms) {
 		for (let resourceName in resourcesOrTransforms) {
 			addResource(null, parentToAdd, resourceName, resourcesOrTransforms[resourceName]);
@@ -55,7 +73,40 @@ function addTransformRulesFromPoint(parentToAdd, tpointName, resourcesOrTransfor
 	}
 }
 
-function addTransformPointsList(event, tpointName, tpoint) {
+function addTransformPointRule(event, appendTo, ruleId, rule) {
+	let inputTransformRuleElement = document.createElement("fieldset");
+	inputTransformRuleElement.setAttribute("inputType", "transformRuleContainer");
+	let inputTransformRulesLegendElement = document.createElement("legend");
+	inputTransformRulesLegendElement.innerText = "Правило преобразования";
+	inputTransformRuleElement.appendChild(inputTransformRulesLegendElement);
+
+	let labelRuleName = document.createElement("label");
+	labelRuleName.innerText = "Имя / ID правила:"
+	let inputRuleName = document.createElement("input");
+	inputRuleName.type = "text";
+	inputRuleName.setAttribute("inputType", "transformRuleName");
+	if (ruleId) {
+		inputRuleName.value = ruleId;
+	}
+	labelRuleName.appendChild(inputRuleName);
+
+	inputTransformRuleElement.appendChild(labelRuleName);
+	addButtonUIControl(inputTransformRuleElement, deleteParentBlock, "Удалить правило");
+	inputTransformRuleElement.appendChild(document.createElement("br"));
+	addCheckboxUIControl(inputTransformRuleElement, "ruleCanExchange", "", "Разрешен обмен ресурсами", rule && rule.canExchange);
+	inputTransformRuleElement.appendChild(document.createElement("br"));
+	addCheckboxUIControl(inputTransformRuleElement, "ruleCanTransform", "", "Разрешено преобразование ресурсов", rule && rule.canTransform);
+	inputTransformRuleElement.appendChild(document.createElement("br"));
+	addButtonUIControl(inputTransformRuleElement, addResource, "Добавить ресурс");
+	addResourceListForElement(inputTransformRuleElement, rule && rule.transformRuleDescriptor);
+	inputTransformRuleElement.appendChild(document.createElement("br"));
+	if (appendTo == null) {
+		appendTo = event.target.parentElement;
+	}
+	appendTo.appendChild(inputTransformRuleElement)
+}
+
+function addTransformPoint(event, tpointName, tpoint) {
 	let inputTransformPointElement = document.createElement("fieldset");
 	let inputTransformPointLegendElement = document.createElement("legend");
 	inputTransformPointElement.setAttribute("inputType", "transformPoint");
@@ -65,7 +116,7 @@ function addTransformPointsList(event, tpointName, tpoint) {
 	let inputTransformRulesElement = document.createElement("fieldset");
 	inputTransformRulesElement.setAttribute("inputType", "transformRulesContainer");
 	let inputTransformRulesLegendElement = document.createElement("legend");
-	inputTransformRulesLegendElement.innerText = "Правило преобразования";
+	inputTransformRulesLegendElement.innerText = "Правила преобразования";
 	inputTransformRulesElement.appendChild(inputTransformRulesLegendElement);
 
 	let inputExchangeRulesElement = document.createElement("fieldset");
@@ -84,52 +135,20 @@ function addTransformPointsList(event, tpointName, tpoint) {
 	}
 	labelTpointName.appendChild(inputTpointName);
 
-	let labelTpointCanExchange = document.createElement("label");
-	labelTpointCanExchange.innerText = "Разрешен обмен ресурсами"
-	let inputTpointCanExchange = document.createElement("input");
-	inputTpointCanExchange.type = "checkbox";
-	inputTpointCanExchange.setAttribute("inputType", "tpointCanExchange");
-	labelTpointCanExchange.appendChild(inputTpointCanExchange);
-
-
-	let labelTpointCanTransform = document.createElement("label");
-	labelTpointCanTransform.innerText = "Разрешено преобразование ресурсов"
-	let inputTpointCanTransform = document.createElement("input");
-	inputTpointCanTransform.type = "checkbox";
-	inputTpointCanTransform.setAttribute("inputType", "tpointCanTransform");
-	labelTpointCanTransform.appendChild(inputTpointCanTransform);
-
-	if (tpoint) {
-		if (tpoint.canExchange) {
-			inputTpointCanExchange.checked = true;
-		}
-		if (tpoint.canTransform) {
-			inputTpointCanTransform.checked = true;
-		}
-	}
-
-
-	let buttonDelRes = document.createElement("button");
-	buttonDelRes.innerText = "Удалить";
-	buttonDelRes.type = "button";
-	buttonDelRes.onclick = deleteParentBlock;
-
-	addResourcesUIControls(inputTransformRulesElement, tpointName, tpoint);
-	addResourcesUIControls(inputExchangeRulesElement, tpointName, tpoint);
-
+	addButtonUIControl(inputExchangeRulesElement, addResource, "Добавить ресурс");
 	inputTransformPointElement.appendChild(labelTpointName);
-	inputTransformPointElement.appendChild(document.createElement("br"));
-	inputTransformPointElement.appendChild(labelTpointCanExchange);
-	inputTransformPointElement.appendChild(document.createElement("br"));
-	inputTransformPointElement.appendChild(labelTpointCanTransform);
 	inputTransformPointElement.appendChild(inputTransformRulesElement);
+	addButtonUIControl(inputTransformRulesElement, addTransformPointRule, "Добавить правило");
+
 	inputTransformPointElement.appendChild(inputExchangeRulesElement);
-	inputTransformPointElement.appendChild(buttonDelRes);
+	addButtonUIControl(inputTransformPointElement, deleteParentBlock, "Удалить ресурс");
 
 	document.getElementById("transformPointsList").appendChild(inputTransformPointElement);
 	if (tpoint) {
-		addTransformRulesFromPoint(inputTransformRulesElement, tpointName, tpoint.transform);
-		addTransformRulesFromPoint(inputExchangeRulesElement, tpointName, tpoint.resources);
+		for (let ruleId in tpoint.transformRules) {
+			addTransformPointRule(event, inputTransformRulesElement, ruleId, tpoint.transformRules[ruleId]);
+		}
+		addResourceListForElement(inputExchangeRulesElement, tpoint.resources);
 	}
 	return true;
 }
@@ -372,16 +391,13 @@ function addResource(event, appendTo, resourceName, resourceCount) {
 	else {
 		inputResCount.value = 0;
 	}
-	let buttonDelRes = document.createElement("button");
-	buttonDelRes.innerText = "Удалить";
-	buttonDelRes.type = "button";
-	buttonDelRes.onclick = deleteParentBlock;
+	
 	labelResName.appendChild(inputResName);
 	labelResCount.appendChild(inputResCount);
 	resourceInputArea.appendChild(document.createElement("hr"));
 	resourceInputArea.appendChild(labelResName);
 	resourceInputArea.appendChild(labelResCount);
-	resourceInputArea.appendChild(buttonDelRes);
+	addButtonUIControl(resourceInputArea, deleteParentBlock, "Удалить ресурс");
 	resourceInputArea.appendChild(document.createElement("hr"));
 	if (appendTo == null) {
 		appendTo = event.target.parentElement;
@@ -407,7 +423,7 @@ function getResourceDefinitionsFromUI() {
 		let resDisplayNameElement = resourceDefinitionsElementsList[i].querySelectorAll("label > input[inputType='resDisplayName']")[0];
 		let resCountIsIntegerElement = resourceDefinitionsElementsList[i].querySelectorAll("label > input[inputType='resCountIsInteger']")[0];
 		if (resNameElement.value != "") {
-			logicSetResourceDefinition(resNameElement.value, resCountIsIntegerElement.checked, resDisplayNameElement.value);
+			logicSetResourceDefinition(new Resource(resNameElement.value, resCountIsIntegerElement.checked, resDisplayNameElement.value));
 		}
 	}
 }
@@ -416,9 +432,6 @@ function getOwnResourcesFromUI() {
 	let myResourcesElementsList = document.getElementById("myResources").querySelectorAll("div[inputType='resourceElement']");
 	for (let i = 0; i < myResourcesElementsList.length; i++) {
 		let resNameElement = myResourcesElementsList[i].querySelectorAll("label > select[inputType='resName']")[0];
-		if (resNameElement == null) {
-			print(myResourcesElementsList);
-		}
 		if (resNameElement.value != "") {
 			let resCountElement = myResourcesElementsList[i].querySelectorAll("label > input[inputType='resCount']")[0];
 			let resCount = 0;
@@ -438,16 +451,37 @@ function getTransformPointsFromUI() {
 	for (let j = 0; j < tpointElementList.length; j++) {
 		let tpointNameElement = tpointElementList[j].querySelectorAll("input[inputType='tpointName']")[0];
 		if (tpointNameElement.value != "") {
-			let inputTpointCanTransform = tpointElementList[j].querySelectorAll("input[inputType='tpointCanTransform']")[0];
-			let inputTpointCanExchange = tpointElementList[j].querySelectorAll("input[inputType='tpointCanExchange']")[0];
-
-			logicSetTransformPointCanTransform(tpointNameElement.value, inputTpointCanTransform.checked);
-			logicSetTransformPointCanExchange(tpointNameElement.value, inputTpointCanExchange.checked);
-			let transformPointResourcesElementList = tpointElementList[j].querySelectorAll("fieldset[inputType='transformRulesContainer'] > div[inputType='resourceElement']");
-			for (let k = 0; k < transformPointResourcesElementList.length; k++) {
-				let resNameElement = transformPointResourcesElementList[k].querySelectorAll("select[inputType='resName']")[0];
+			let transformPointRules = tpointElementList[j].querySelectorAll("fieldset[inputType='transformRuleContainer']");
+			let transformRules = {};
+			for (let i = 0; i < transformPointRules.length; i++) {
+				let transformDescriptor = {};
+				let transformRuleResourcesElementList = transformPointRules[i].querySelectorAll("div[inputType='resourceElement']");
+				let transformRuleName = transformPointRules[i].querySelectorAll("input[inputType='transformRuleName']")[0];
+				let inputTpointCanTransform = transformPointRules[i].querySelectorAll("input[inputType='ruleCanTransform']")[0];
+				let inputTpointCanExchange = transformPointRules[i].querySelectorAll("input[inputType='ruleCanExchange']")[0];
+				for (let k = 0; k < transformRuleResourcesElementList.length; k++) {
+					let resNameElement = transformRuleResourcesElementList[k].querySelectorAll("select[inputType='resName']")[0];
+					if (resNameElement.value != "") {
+						let resCountElement = transformRuleResourcesElementList[k].querySelectorAll("input[inputType='resCount']")[0];
+						let resCount = 0;
+						if (resCountElement.step < 1) {
+							resCount = parseFloat(resCountElement.value);
+						}
+						else {
+							resCount = parseInt(resCountElement.value);
+						}
+						transformDescriptor[resNameElement.value] = resCount;
+						//console.log(`[${tpointNameElement.value}][${resNameElement.value}] = ${resCountElement.value}`);
+					}
+				}
+				transformRules[transformRuleName.value] = new ResourceTransformRule(transformRuleName.value, transformDescriptor, inputTpointCanTransform.checked, inputTpointCanExchange.checked);
+			}
+			let tpointResources = {};
+			let exchangePointResourcesElementList = tpointElementList[j].querySelectorAll("fieldset[inputType='exchangeRulesContainer'] > div[inputType='resourceElement']");
+			for (let k = 0; k < exchangePointResourcesElementList.length; k++) {
+				let resNameElement = exchangePointResourcesElementList[k].querySelectorAll("select[inputType='resName']")[0];
 				if (resNameElement.value != "") {
-					let resCountElement = transformPointResourcesElementList[k].querySelectorAll("input[inputType='resCount']")[0];
+					let resCountElement = exchangePointResourcesElementList[k].querySelectorAll("input[inputType='resCount']")[0];
 					let resCount = 0;
 					if (resCountElement.step < 1) {
 						resCount = parseFloat(resCountElement.value);
@@ -455,30 +489,32 @@ function getTransformPointsFromUI() {
 					else {
 						resCount = parseInt(resCountElement.value);
 					}
-
-					logicSetTransformPointTransformResourcesCount(tpointNameElement.value, resNameElement.value, resCount);
-					//print(`[${tpointNameElement.value}][${resNameElement.value}] = ${resCountElement.value}`);
+					tpointResources[resNameElement.value] = resCount;
+					//console.log(`[${tpointNameElement.value}][${resNameElement.value}] = ${resCountElement.value}`);
 				}
 			}
-			transformPointResourcesElementList = tpointElementList[j].querySelectorAll("fieldset[inputType='exchangeRulesContainer'] > div[inputType='resourceElement']");
-			for (let k = 0; k < transformPointResourcesElementList.length; k++) {
-				let resNameElement = transformPointResourcesElementList[k].querySelectorAll("select[inputType='resName']")[0];
-				if (resNameElement.value != "") {
-					let resCountElement = transformPointResourcesElementList[k].querySelectorAll("input[inputType='resCount']")[0];
-					let resCount = 0;
-					if (resCountElement.step < 1) {
-						resCount = parseFloat(resCountElement.value);
-					}
-					else {
-						resCount = parseInt(resCountElement.value);
-					}
-					logicSetTransformPointOwnResourcesCount(tpointNameElement.value, resNameElement.value, resCount);
-					//print(`[${tpointNameElement.value}][${resNameElement.value}] = ${resCountElement.value}`);
-				}
-			}
+			logicSaveTransformPoint(new ResourceTransformPoint(tpointNameElement.value, transformRules, tpointResources));
 		}
 	}
 }
+
+function exportInputDataToJSON(event) {
+	logicClearAll();
+	getResourceDefinitionsFromUI();
+	getOwnResourcesFromUI();
+	getTransformPointsFromUI();
+	let stringifiedJSON = JSON.stringify({
+		"definitions": logicGetResourceDefinitions(),
+		"own": logicGetOwnResources(),
+		"transformPoints": logicGetTransformPoints()		
+	});
+	//this.href = data:application/json;
+	this.href = window.URL.createObjectURL(new Blob([stringifiedJSON], {type: 'application/json'}));
+	this.download = "resourcesInputData.json";
+	logicClearAll();
+	return true;
+}
+
 
 function fillInAndCalculate(event) {
 	logicClearAll();
@@ -486,7 +522,7 @@ function fillInAndCalculate(event) {
 	getOwnResourcesFromUI();
 	getTransformPointsFromUI();
 	const chainLengthCutoffLimitElement = document.getElementById("chainLengthCutoff");
-	print("*** START ***");
+	console.log("*** START ***");
 	displayCalculationResults(event, calculateTransformChains(chainLengthCutoffLimitElement.value));
 	return true;
 }
@@ -536,7 +572,7 @@ function buildTransformDescriptorUITables(transformDescriptorResourcesState, def
 	return resultValue;
 }
 
-function displayTransformChain(definitions, transformDescriptor, resultDataElement, index, subindexString) {
+function displayTransformChain(definitions, chainLink, resultDataElement, index, subindexString) {
 	if (subindexString == null) {
 		subindexString = "";
 	}
@@ -544,24 +580,24 @@ function displayTransformChain(definitions, transformDescriptor, resultDataEleme
 		subindexString = subindexString+".";
 	}
 	let transformDescriptionOutputElement;
-	if (transformDescriptor.type == "resource") {
+	if (chainLink.type == "resource") {
 		let tpNameElement = document.createElement("div");
-		tpNameElement.innerText = `${subindexString+index} Точка преобразования: ${transformDescriptor.tpoint}`;
-
-		let transformPointDescriptionElement = buildResourcesStateTable(transformDescriptor.transformDescriptor[0], "transform", "Описание преобразования / обмена:", definitions);
+		tpNameElement.innerText = `${subindexString+index} Точка: ${chainLink.transformDescriptors[0].transformPoint.name}`;
+		let tpRuleNameElement = document.createElement("div");
+		tpRuleNameElement.innerText = `${subindexString+index} Правило: ${chainLink.transformDescriptors[0].transformRule.name}`;
+		let transformPointDescriptionElement = buildResourcesStateTable(chainLink.transformDescriptors[0].transformRule, "transformRuleDescriptor", "Описание преобразования / обмена:", definitions);
 		let transformMultiplierCountElement = document.createElement("div");
-		transformMultiplierCountElement.innerText = `Количество преобразований / обменов: ${transformDescriptor.multiplier}`
-		console.log(transformDescriptor);
-		let comparisonInitialUITables = buildTransformDescriptorUITables(transformDescriptor.resourcesStateInitial, definitions);
-		let comparisonResultUITables = buildTransformDescriptorUITables(transformDescriptor.resourcesStateResult, definitions);	
+		transformMultiplierCountElement.innerText = `Количество преобразований / обменов: ${chainLink.multiplier}`
+		let comparisonInitialUITables = buildTransformDescriptorUITables(chainLink.resourcesStateInitial, definitions);
+		let comparisonResultUITables = buildTransformDescriptorUITables(chainLink.resourcesStateResult, definitions);	
 
-		let destOwnResourcesStateElement = buildResourcesStateTable(transformDescriptor.resourcesStateResult, "own", "Собственные ресурсы:", definitions);
+		let destOwnResourcesStateElement = buildResourcesStateTable(chainLink.resourcesStateResult, "own", "Собственные ресурсы:", definitions);
 		let destTPResourcesStateElement = document.createElement("div");
 		let destTPResourcesStateCaptionElement = document.createElement("span");
 		destTPResourcesStateCaptionElement.innerText = "Ресурсы точек обмена:";
 		destTPResourcesStateElement.appendChild(destTPResourcesStateCaptionElement);
-		for (let tpName in transformDescriptor.resourcesStateResult.transformPoints) {
-			let tPoint = transformDescriptor.resourcesStateResult.transformPoints[tpName];
+		for (let tpName in chainLink.resourcesStateResult.transformPoints) {
+			let tPoint = chainLink.resourcesStateResult.transformPoints[tpName];
 			if (tPoint.resources != null) {
 				let tpOwnResourceTable = buildResourcesStateTable(tPoint, "resources", tpName+":", definitions);
 				destTPResourcesStateElement.appendChild(tpOwnResourceTable);
@@ -570,7 +606,7 @@ function displayTransformChain(definitions, transformDescriptor, resultDataEleme
 
 		let fragment = document.createDocumentFragment();
 		fragment.appendChild(tpNameElement);
-
+		fragment.appendChild(tpRuleNameElement);
 		fragment.appendChild(transformPointDescriptionElement);
 		fragment.appendChild(transformMultiplierCountElement);
 		let stateComparisonTable = document.createElement("table");
@@ -594,17 +630,17 @@ function displayTransformChain(definitions, transformDescriptor, resultDataEleme
 		fragment.appendChild(document.createElement("br"));
 		resultDataElement.appendChild(fragment);
 	}
-	else 	if (transformDescriptor.type == "chain") {
+	else 	if (chainLink.type == "chain") {
 		let transformDescriptionOutputElement = document.createElement("details");
 		let summaryElement = document.createElement("summary");
 		let subtreeElement = document.createElement("div");
 
-		summaryElement.innerText = subindexString+index+" "+transformDescriptor.name;
+		summaryElement.innerText = subindexString+index+" "+chainLink.name;
 		transformDescriptionOutputElement.appendChild(summaryElement);
 		transformDescriptionOutputElement.appendChild(subtreeElement);
 		resultDataElement.appendChild(transformDescriptionOutputElement);
-		for (let i = 0; i < transformDescriptor.transformDescriptor.length; i++) {
-			displayTransformChain(definitions, transformDescriptor.transformDescriptor[i], subtreeElement, i+1, subindexString+index);
+		for (let i = 0; i < chainLink.transformDescriptors.length; i++) {
+			displayTransformChain(definitions, chainLink.transformDescriptors[i], subtreeElement, i+1, subindexString+index);
 		}
 	}
 }
@@ -629,3 +665,9 @@ function displayCalculationResults(event, chainsForResource) {
 		resultsElement.appendChild(resultStr);
 	}
 }
+
+function onDocumentLoaded() {
+	document.getElementById("exportInputDataToJSON").addEventListener("click", exportInputDataToJSON);
+}
+
+window.addEventListener("load", onDocumentLoaded);

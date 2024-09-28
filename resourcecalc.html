@@ -53,10 +53,12 @@ div[inputType="resourceElement"] {
 <fieldset>
 <legend>Точки обмена / преобразования</legend>
 <div id="transformPointsList"></div>
-<button type="button" onclick="return addTransformPointsList(event);">Добавить точку обмена / преобразования</button>
+<button type="button" onclick="return addTransformPoint(event);">Добавить точку обмена / преобразования</button>
 </fieldset>
 <br/>
-<div><label>Заполнить данные из сохраненного файла: <input type="file" name="resourcesStateFile" accept="application/json" onchange="return onResourcesStateFileSelected(event);"></label></div>
+<div>Сохранить входные данные в файл: <a id="exportInputDataToJSON" href="#">Сохранить</a></div>
+<br/>
+<div><label>Заполнить входные данные из сохраненного файла: <input type="file" name="resourcesStateFile" accept="application/json" onchange="return onResourcesStateFileSelected(event);"></label></div>
 <br/>
 <label>Максимальная длина цепочки преобразования: <input type="number" min="1" max="1000" step="1" name="chainLengthCutoff" id="chainLengthCutoff" value="10"/></label>
 <div><button type="button" onclick="return fillInAndCalculate(event);">Рассчитать цепочки обмена / преобразования</button></div>
@@ -64,8 +66,9 @@ div[inputType="resourceElement"] {
 <br/>
 <div>Результаты расчёта:</div>
 <div id="results"></div>
-<script src="resourcecalc_model.js" async="false"></script>
-<script src="resourcecalc_logic.js" async="false"></script>
-<script src="resourcecalc_ui.js" async="false"></script>
+<script src="resourcecalc_common.js"></script>
+<script src="resourcecalc_model.js"></script>
+<script src="resourcecalc_logic.js"></script>
+<script src="resourcecalc_ui.js"></script>
 </body>
 </html>

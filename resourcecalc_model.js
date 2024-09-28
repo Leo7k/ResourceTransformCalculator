@@ -1,19 +1,26 @@
 let model_resourceDefinitions = {};
 let model_resourceTransformPoints = {};
+let model_resourceTransformPointsState = {};
 let model_myOwnResources = {};
 
-
 function modelClearAll() {
-	model_resourceTransformPoints = {};
+	model_resourceTransformPointsState = {};
 	model_myOwnResources = {};
+	model_resourceTransformPoints = {};
+	model_resourceDefinitions = {};
 }
 
 function modelGetTransformPoints() {
 	return model_resourceTransformPoints;
 }
-
+function modelGetTransformPointsState() {
+	return model_resourceTransformPointsState;
+}
 function modelGetResourceDefinitions() {
 	return model_resourceDefinitions;
+}
+function modelGetResourceDefinition(resName) {
+	return model_resourceDefinitions[resName];
 }
 
 function modelSetTransformPoints(transformPoints) {
@@ -21,69 +28,23 @@ function modelSetTransformPoints(transformPoints) {
 		model_resourceTransformPoints = transformPoints;
 	}
 }
-
-function modelSetResourceDefinition(resName, isInteger, displayName, additionalData) {
-	if (resName != null) {
-		if (model_resourceDefinitions[resName] == null) {
-			model_resourceDefinitions[resName] = {};
-		}
-		model_resourceDefinitions[resName].isInteger = (isInteger == true);
-		model_resourceDefinitions[resName].displayName = displayName;
-		model_resourceDefinitions[resName].additionalData = additionalData;
+function modelSaveTransformPoint(transformPoint) {
+	if (transformPoint != null) {
+		model_resourceTransformPoints[transformPoint.name] = transformPoint;
+		model_resourceTransformPointsState[transformPoint.name] = transformPoint.resources;
 	}
 }
 
-
-function modelSetTransformPointCanExchange(transformPointName, canExchange) {
-	if (transformPointName != null) {
-		if (model_resourceTransformPoints[transformPointName] == null) {
-			model_resourceTransformPoints[transformPointName] = {};
-		}
-		model_resourceTransformPoints[transformPointName].canExchange = (canExchange == true);
+function modelSetResourceDefinition(resource) {
+	if (resource != null) {
+		model_resourceDefinitions[resource.name] = resource;
 	}
 }
 
-function modelSetTransformPointCanTransform(transformPointName, canTransform) {
-	if (transformPointName != null) {
-		if (model_resourceTransformPoints[transformPointName] == null) {
-			model_resourceTransformPoints[transformPointName] = {};
-		}
-		model_resourceTransformPoints[transformPointName].canTransform = (canTransform == true);
-	}
+function modelGetResourceDefinition(resName) {
+	return model_resourceDefinitions[resName];
 }
 
-
-function modelSetTransformPointTransformResourcesCount(transformPointName, resourceName, count) {
-	if ((transformPointName != null) && (resourceName != null) && (count !== undefined) && (count !== null)) {
-		if (model_resourceTransformPoints[transformPointName] == null) {
-			model_resourceTransformPoints[transformPointName] = {};
-		}
-		const transformPoint = model_resourceTransformPoints[transformPointName];
-		if (transformPoint.canExchange === undefined) {
-			transformPoint.canExchange = false;
-		}
-		if (transformPoint.transform == undefined) {
-			transformPoint.transform = {};
-		}
-		transformPoint.transform[resourceName] = count;
-	}
-}
-
-function modelSetTransformPointOwnResourcesCount(transformPointName, resourceName, count) {
-	if ((transformPointName != null) && (resourceName != null) && (count !== undefined) && (count !== null)) {
-		if (model_resourceTransformPoints[transformPointName] == null) {
-			model_resourceTransformPoints[transformPointName] = {};
-		}
-		const transformPoint = model_resourceTransformPoints[transformPointName];
-		if (transformPoint.canExchange === undefined) {
-			transformPoint.canExchange = false;
-		}
-		if (transformPoint.resources == undefined) {
-			transformPoint.resources = {};
-		}
-		transformPoint.resources[resourceName] = count;
-	}
-}
 
 function modelGetOwnResources() {
 	return model_myOwnResources;
