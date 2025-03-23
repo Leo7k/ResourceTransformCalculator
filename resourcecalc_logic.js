@@ -47,32 +47,36 @@ function logicSetOwnResourceCount(resourceName, count) {
 	return modelSetOwnResourceCount(resourceName, count);
 }
 
-function calculateTransformChains(chainLengthCutoffLimit) {
+function calculateTransformChains(chainLengthCutoffLimit, successProbabilityCutoff) {
 	resourceCalculationInProgress = {};
 	transformChains = {};
 	let chainsForResource = {};
-	let resourcesState = {
+	let srcStateResources = {
 		own: copyKeyValueTable(logicGetOwnResources()),
 		transformPoints: logicGetTransformPointsState()
 	};
-	for (let resourceName in resourcesState.own) {
-		let ownResourceCount = resourcesState.own[resourceName];
+	for (let resourceName in srcStateResources.own) {
+		let ownResourceCount = srcStateResources.own[resourceName];
 		if (ownResourceCount < 0) {
-			chainsForResource[resourceName] = getTransformChainsForResource(resourceName, resourcesState, chainLengthCutoffLimit);
+			chainsForResource[resourceName] = getTransformChainsForResource(resourceName, srcStateResources, chainLengthCutoffLimit, 1, successProbabilityCutoff);
 			//break;
 		}
 	}
 	return chainsForResource;
 }
 
-function getTransformChainsForResource(resourceName, srcStateResources, chainLengthCutoffLimit) {
+function getTransformChainsForResource(resourceName, srcStateResources, chainLengthCutoffLimit, currentSuccessProbability, successProbabilityCutoff) {
 	let transformChain = [];
 	if (resourceCalculationInProgress[resourceName]) {
 		console.log(`Resource ${resourceName} calculation already in progress`);
 		return transformChain;
 	}
 	if (chainLengthCutoffLimit < 1) {
-		console.log(`Resource chain limit reached`);
+		console.log(`Resource chain length limit reached`);
+		return transformChain;
+	}
+	if (currentSuccessProbability < successProbabilityCutoff) {
+		console.log(`Resource chain success probability limit reached`);
 		return transformChain;
 	}
 	resourceCalculationInProgress[resourceName] = true;
@@ -96,20 +100,28 @@ function getTransformChainsForResource(resourceName, srcStateResources, chainLen
 			if (tpResourceTransformRules != null) {
 				let transformResult = transformRule.applyTransform(transformPoint, srcStateResources);
 				if (transformResult) {
+					let requiredCountMultiplier = transformResult.requiredCountMultiplier;
+					let ruleSuccessProbability = 0;
+					if (transformRule.applyMultiplierToSuccessProbability) {
+						ruleSuccessProbability = Math.pow(transformRule.successProbability, requiredCountMultiplier);
+					}
+					else {
+						ruleSuccessProbability = transformRule.successProbability;
+					}
+					let successProbabilityAfterRule = ruleSuccessProbability*currentSuccessProbability;
 					let resourcesState = transformResult.resourcesState;
-					let requiredCountMultiplier  = transformResult.requiredCountMultiplier;
 					for (let intermediateResourceName in tpResourceTransformRules) {
 						let currentOwnResourceCount = resourcesState.own[intermediateResourceName] || 0;
 						if ((tpResourceTransformRules[intermediateResourceName] < 0) && (currentOwnResourceCount < 0)) {
-							let underlyingTransformChain = getTransformChainsForResource(intermediateResourceName, resourcesState, chainLengthCutoffLimit -1);
+							let underlyingTransformChain = getTransformChainsForResource(intermediateResourceName, resourcesState, chainLengthCutoffLimit -1, successProbabilityAfterRule, successProbabilityCutoff);
 							if (underlyingTransformChain.length > 0) {
 								console.log(`Lack of required resource ${intermediateResourceName} in transform point ${tpoint}, required: ${requiredCountMultiplier*tpResourceTransformRules[intermediateResourceName]}, has: ${resourcesState.own[intermediateResourceName]}. We need to go deeper...`);
-								underlyingTransformChain.unshift(new ResourceTransformChainLink(resourceName, "resource", [new ResourceTransformDescriptor(transformPoint, transformRule)], requiredCountMultiplier, srcStateResources, resourcesState));
-								transformChain.push(new ResourceTransformChainLink(resourceName+"_chain", "chain", underlyingTransformChain));
+								underlyingTransformChain.unshift(new ResourceTransformChainLink(resourceName, "resource", [new ResourceTransformDescriptor(transformPoint, transformRule)], requiredCountMultiplier, currentSuccessProbability, srcStateResources, successProbabilityAfterRule, resourcesState));
+								transformChain.push(new ResourceTransformChainLink(resourceName+"_chain", "chain", underlyingTransformChain, 1, successProbabilityAfterRule, resourcesState));
 								subchainUsed = true;
 							}
 							else {
-								console.log(`Required resource ${intermediateResourceName} is not found in transform point ${tpoint}`);
+								console.log(`Required resource ${intermediateResourceName} is not found in transform point ${tpoint} with required minimal success probability ${successProbabilityCutoff}`);
 								hasRequiredResources = false;
 								break;
 							}
@@ -118,8 +130,8 @@ function getTransformChainsForResource(resourceName, srcStateResources, chainLen
 							console.log(`Enough resources of type ${intermediateResourceName} in transform point ${tpoint}, required: ${requiredCountMultiplier*tpResourceTransformRules[intermediateResourceName]}, has: ${srcStateResources.own[intermediateResourceName]}`);
 						}
 					}
-					if (hasRequiredResources && !subchainUsed) {
-						transformChain.push(new ResourceTransformChainLink(resourceName, "resource", [new ResourceTransformDescriptor(transformPoint, transformRule)], requiredCountMultiplier, srcStateResources, resourcesState));
+					if (hasRequiredResources && (successProbabilityAfterRule > successProbabilityCutoff) && !subchainUsed) {
+						transformChain.push(new ResourceTransformChainLink(resourceName, "resource", [new ResourceTransformDescriptor(transformPoint, transformRule)], requiredCountMultiplier, currentSuccessProbability, srcStateResources, successProbabilityAfterRule, resourcesState));
 					}
 				}
 			}

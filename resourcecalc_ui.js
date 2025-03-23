@@ -89,13 +89,35 @@ function addTransformPointRule(event, appendTo, ruleId, rule) {
 		inputRuleName.value = ruleId;
 	}
 	labelRuleName.appendChild(inputRuleName);
-
 	inputTransformRuleElement.appendChild(labelRuleName);
+
 	addButtonUIControl(inputTransformRuleElement, deleteParentBlock, "Удалить правило");
 	inputTransformRuleElement.appendChild(document.createElement("br"));
 	addCheckboxUIControl(inputTransformRuleElement, "ruleCanExchange", "", "Разрешен обмен ресурсами", rule && rule.canExchange);
 	inputTransformRuleElement.appendChild(document.createElement("br"));
 	addCheckboxUIControl(inputTransformRuleElement, "ruleCanTransform", "", "Разрешено преобразование ресурсов", rule && rule.canTransform);
+	inputTransformRuleElement.appendChild(document.createElement("br"));
+
+	let labelRuleSuccessProbability = document.createElement("label");
+	labelRuleSuccessProbability.innerText = "Вероятность успеха (от 0 до 1, где 1 - 100%):"
+	let inputRuleSuccessProbability = document.createElement("input");
+	inputRuleSuccessProbability.type = "number";
+	inputRuleSuccessProbability.step = 0.001;
+	inputRuleSuccessProbability.min = 0;
+	inputRuleSuccessProbability.max = 1;
+	inputRuleSuccessProbability.required = true;
+	inputRuleSuccessProbability.setAttribute("inputType", "transformSuccessProbability");
+	if (rule && rule.successProbability) {
+		inputRuleSuccessProbability.value = rule.successProbability;
+	}
+	else {
+		inputRuleSuccessProbability.value = 1;
+	}
+	labelRuleSuccessProbability.appendChild(inputRuleSuccessProbability);
+	inputTransformRuleElement.appendChild(labelRuleSuccessProbability);
+	inputTransformRuleElement.appendChild(document.createElement("br"));
+	addCheckboxUIControl(inputTransformRuleElement, "applyMultiplierToSuccessProbability", "", "Вероятность успеха указана для единичного обмена / преобразования по правилу", rule && rule.applyMultiplierToSuccessProbability);
+
 	inputTransformRuleElement.appendChild(document.createElement("br"));
 	addButtonUIControl(inputTransformRuleElement, addResource, "Добавить ресурс");
 	addResourceListForElement(inputTransformRuleElement, rule && rule.transformRuleDescriptor);
@@ -141,7 +163,7 @@ function addTransformPoint(event, tpointName, tpoint) {
 	addButtonUIControl(inputTransformRulesElement, addTransformPointRule, "Добавить правило");
 
 	inputTransformPointElement.appendChild(inputExchangeRulesElement);
-	addButtonUIControl(inputTransformPointElement, deleteParentBlock, "Удалить ресурс");
+	addButtonUIControl(inputTransformPointElement, deleteParentBlock, "Удалить точку обмена / преобразования");
 
 	document.getElementById("transformPointsList").appendChild(inputTransformPointElement);
 	if (tpoint) {
@@ -159,7 +181,7 @@ function onDefinitionResourceNameChange(event) {
 		let containerElement = allResourceDescriptorElements[i];
 		let resNameElement = containerElement.querySelectorAll('[inputType="resName"]')[0];
 		let resDisplayNameElement = containerElement.querySelectorAll('[inputType="resDisplayName"]')[0];
-		if (Object.is(resNameElement, this) || Object.is(resDisplayNameElement, this)) {
+		if (resNameElement.reportValidity() && resDisplayNameElement.reportValidity() && (Object.is(resNameElement, this) || Object.is(resDisplayNameElement, this))) {
 			setResourceOptionForAllInputs(i, this.value, resDisplayNameElement.value);
 			break;
 		}
@@ -422,7 +444,7 @@ function getResourceDefinitionsFromUI() {
 		let resNameElement = resourceDefinitionsElementsList[i].querySelectorAll("label > input[inputType='resName']")[0];
 		let resDisplayNameElement = resourceDefinitionsElementsList[i].querySelectorAll("label > input[inputType='resDisplayName']")[0];
 		let resCountIsIntegerElement = resourceDefinitionsElementsList[i].querySelectorAll("label > input[inputType='resCountIsInteger']")[0];
-		if (resNameElement.value != "") {
+		if (resNameElement.reportValidity()) {
 			logicSetResourceDefinition(new Resource(resNameElement.value, resCountIsIntegerElement.checked, resDisplayNameElement.value));
 		}
 	}
@@ -432,7 +454,7 @@ function getOwnResourcesFromUI() {
 	let myResourcesElementsList = document.getElementById("myResources").querySelectorAll("div[inputType='resourceElement']");
 	for (let i = 0; i < myResourcesElementsList.length; i++) {
 		let resNameElement = myResourcesElementsList[i].querySelectorAll("label > select[inputType='resName']")[0];
-		if (resNameElement.value != "") {
+		if (resNameElement.reportValidity()) {
 			let resCountElement = myResourcesElementsList[i].querySelectorAll("label > input[inputType='resCount']")[0];
 			let resCount = 0;
 			if (resCountElement.step < 1) {
@@ -450,19 +472,25 @@ function getTransformPointsFromUI() {
 	let tpointElementList = document.getElementById("transformPointsList").querySelectorAll("fieldset[inputType='transformPoint']");
 	for (let j = 0; j < tpointElementList.length; j++) {
 		let tpointNameElement = tpointElementList[j].querySelectorAll("input[inputType='tpointName']")[0];
-		if (tpointNameElement.value != "") {
+		if (tpointNameElement.reportValidity()) {
 			let transformPointRules = tpointElementList[j].querySelectorAll("fieldset[inputType='transformRuleContainer']");
 			let transformRules = {};
 			for (let i = 0; i < transformPointRules.length; i++) {
 				let transformDescriptor = {};
-				let transformRuleResourcesElementList = transformPointRules[i].querySelectorAll("div[inputType='resourceElement']");
-				let transformRuleName = transformPointRules[i].querySelectorAll("input[inputType='transformRuleName']")[0];
-				let inputTpointCanTransform = transformPointRules[i].querySelectorAll("input[inputType='ruleCanTransform']")[0];
-				let inputTpointCanExchange = transformPointRules[i].querySelectorAll("input[inputType='ruleCanExchange']")[0];
+				let transformPointRule = transformPointRules[i];
+				let transformRuleResourcesElementList = transformPointRule.querySelectorAll("div[inputType='resourceElement']");
+				let transformRuleName = transformPointRule.querySelectorAll("input[inputType='transformRuleName']")[0];
+				transformRuleName.reportValidity();
+				let inputRuleSuccessProbability = transformPointRule.querySelectorAll("input[inputType='transformSuccessProbability']")[0];
+				inputRuleSuccessProbability.reportValidity();
+
+				let inputTpointCanTransform = transformPointRule.querySelectorAll("input[inputType='ruleCanTransform']")[0];
+				let inputTpointCanExchange = transformPointRule.querySelectorAll("input[inputType='ruleCanExchange']")[0];
+				let inputApplyMultiplierToSuccessProbability = transformPointRule.querySelectorAll("input[inputType='applyMultiplierToSuccessProbability']")[0];
 				for (let k = 0; k < transformRuleResourcesElementList.length; k++) {
 					let resNameElement = transformRuleResourcesElementList[k].querySelectorAll("select[inputType='resName']")[0];
-					if (resNameElement.value != "") {
-						let resCountElement = transformRuleResourcesElementList[k].querySelectorAll("input[inputType='resCount']")[0];
+					let resCountElement = transformRuleResourcesElementList[k].querySelectorAll("input[inputType='resCount']")[0];
+					if (resNameElement.reportValidity() && resCountElement.reportValidity()) {
 						let resCount = 0;
 						if (resCountElement.step < 1) {
 							resCount = parseFloat(resCountElement.value);
@@ -474,14 +502,14 @@ function getTransformPointsFromUI() {
 						//console.log(`[${tpointNameElement.value}][${resNameElement.value}] = ${resCountElement.value}`);
 					}
 				}
-				transformRules[transformRuleName.value] = new ResourceTransformRule(transformRuleName.value, transformDescriptor, inputTpointCanTransform.checked, inputTpointCanExchange.checked);
+				transformRules[transformRuleName.value] = new ResourceTransformRule(transformRuleName.value, transformDescriptor, inputTpointCanTransform.checked, inputTpointCanExchange.checked, parseFloat(inputRuleSuccessProbability.value), inputApplyMultiplierToSuccessProbability.checked);
 			}
 			let tpointResources = {};
 			let exchangePointResourcesElementList = tpointElementList[j].querySelectorAll("fieldset[inputType='exchangeRulesContainer'] > div[inputType='resourceElement']");
 			for (let k = 0; k < exchangePointResourcesElementList.length; k++) {
 				let resNameElement = exchangePointResourcesElementList[k].querySelectorAll("select[inputType='resName']")[0];
-				if (resNameElement.value != "") {
-					let resCountElement = exchangePointResourcesElementList[k].querySelectorAll("input[inputType='resCount']")[0];
+				let resCountElement = exchangePointResourcesElementList[k].querySelectorAll("input[inputType='resCount']")[0];
+				if (resNameElement.reportValidity() && resCountElement.reportValidity()) {
 					let resCount = 0;
 					if (resCountElement.step < 1) {
 						resCount = parseFloat(resCountElement.value);
@@ -522,8 +550,11 @@ function fillInAndCalculate(event) {
 	getOwnResourcesFromUI();
 	getTransformPointsFromUI();
 	const chainLengthCutoffLimitElement = document.getElementById("chainLengthCutoff");
-	console.log("*** START ***");
-	displayCalculationResults(event, calculateTransformChains(chainLengthCutoffLimitElement.value));
+	const successProbabilityCutoffLimitElement = document.getElementById("successProbabilityCutoff");
+	if (chainLengthCutoffLimitElement.reportValidity() && successProbabilityCutoffLimitElement.reportValidity()) {
+		console.log("*** START ***");
+		displayCalculationResults(event, calculateTransformChains(chainLengthCutoffLimitElement.value, successProbabilityCutoffLimitElement.value));
+	}
 	return true;
 }
 
@@ -588,6 +619,10 @@ function displayTransformChain(definitions, chainLink, resultDataElement, index,
 		let transformPointDescriptionElement = buildResourcesStateTable(chainLink.transformDescriptors[0].transformRule, "transformRuleDescriptor", "Описание преобразования / обмена:", definitions);
 		let transformMultiplierCountElement = document.createElement("div");
 		transformMultiplierCountElement.innerText = `Количество преобразований / обменов: ${chainLink.multiplier}`
+
+		let transformInitialSuccessProbability = document.createElement("div");
+		transformInitialSuccessProbability.innerText = `Исходная вероятность успеха (до преобразования): ${chainLink.successProbabilityInitial}`
+
 		let comparisonInitialUITables = buildTransformDescriptorUITables(chainLink.resourcesStateInitial, definitions);
 		let comparisonResultUITables = buildTransformDescriptorUITables(chainLink.resourcesStateResult, definitions);	
 
@@ -609,6 +644,13 @@ function displayTransformChain(definitions, chainLink, resultDataElement, index,
 		fragment.appendChild(tpRuleNameElement);
 		fragment.appendChild(transformPointDescriptionElement);
 		fragment.appendChild(transformMultiplierCountElement);
+		fragment.appendChild(transformInitialSuccessProbability);
+		if (chainLink.successProbabilityResult !== undefined) {
+			let transformResultSuccessProbability = document.createElement("div");
+			transformResultSuccessProbability.innerText = `Конечная вероятность успеха (после преобразования): ${chainLink.successProbabilityResult}`
+			fragment.appendChild(transformResultSuccessProbability);
+		}
+
 		let stateComparisonTable = document.createElement("table");
 		let stateComparisonTableHead = stateComparisonTable.createTHead();
 

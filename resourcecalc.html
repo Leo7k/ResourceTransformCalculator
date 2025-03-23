@@ -60,7 +60,9 @@ div[inputType="resourceElement"] {
 <br/>
 <div><label>Заполнить входные данные из сохраненного файла: <input type="file" name="resourcesStateFile" accept="application/json" onchange="return onResourcesStateFileSelected(event);"></label></div>
 <br/>
-<label>Максимальная длина цепочки преобразования: <input type="number" min="1" max="1000" step="1" name="chainLengthCutoff" id="chainLengthCutoff" value="10"/></label>
+<label>Максимальная длина цепочки преобразований: <input type="number" min="1" max="1000" step="1" name="chainLengthCutoff" id="chainLengthCutoff" value="10" required/></label>
+<br/>
+<label>Минимальная вероятность успеха выполнения цепочки преобразований (от 0 до 1, где 1 - 100%): <input type="number" min="0" max="1" step="0.001" name="successProbabilityCutoff" id="successProbabilityCutoff" value="1" required/></label>
 <div><button type="button" onclick="return fillInAndCalculate(event);">Рассчитать цепочки обмена / преобразования</button></div>
 </form>
 <br/>

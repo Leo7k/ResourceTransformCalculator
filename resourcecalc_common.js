@@ -38,11 +38,14 @@ class ResourceTransformRule {
 	#integerQuantityResourcesPresent = false;
 	canTransform = true;
 	canExchange = false;
-	constructor(name, transformRuleDescriptor = {}, canTransform = true, canExchange = false, displayName) {
+	applyMultiplierToSuccessProbability = false;
+	constructor(name, transformRuleDescriptor = {}, canTransform = true, canExchange = false, successProbability = 1, applyMultiplierToSuccessProbability = false, displayName) {
 		this.name = name;
 		this.displayName = displayName || name;
 		this.canTransform = (canTransform !== false);
 		this.canExchange = (canExchange === true);
+		this.successProbability = successProbability;
+		this.applyMultiplierToSuccessProbability = applyMultiplierToSuccessProbability;
 		this.transformRuleDescriptor = transformRuleDescriptor;
 		for (let rresrc in transformRuleDescriptor) {
 			if (logicGetResourceDefinition(rresrc).isInteger) {
@@ -155,12 +158,15 @@ class ResourceTransformChainLink {
 	resourcesStateInitial = {};
 	resourcesStateResult = {};
 	multiplier = 1;
-	constructor(name, type, transformDescriptors, multiplier = 1, resourcesStateInitial = {}, resourcesStateResult = {}) {
+	successProbabilityInitial = 1;
+	constructor(name, type, transformDescriptors, multiplier = 1, successProbabilityInitial = 1, resourcesStateInitial = {}, successProbabilityResult, resourcesStateResult = {}) {
 		this.name = name;
 		this.type = type;
 		this.multiplier = multiplier || 1;
 		this.transformDescriptors = transformDescriptors;
 		this.resourcesStateInitial = resourcesStateInitial;
+		this.successProbabilityInitial = successProbabilityInitial;
 		this.resourcesStateResult = resourcesStateResult;
+		this.successProbabilityResult = successProbabilityResult;
 	}
 }
