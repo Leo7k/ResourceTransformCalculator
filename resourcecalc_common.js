@@ -16,10 +16,12 @@ class Resource {
 	name;
 	displayName;
 	isInteger = true;
-	constructor(name, isInteger, displayName) {
+	preferenceIndex = 0;
+	constructor(name, isInteger, preferenceIndex, displayName) {
 		this.name = name;
 		this.displayName = displayName || name;
 		this.isInteger = (isInteger !== false);
+		this.preferenceIndex = preferenceIndex;
 	}
 }
 
@@ -48,9 +50,15 @@ class ResourceTransformRule {
 		this.applyMultiplierToSuccessProbability = applyMultiplierToSuccessProbability;
 		this.transformRuleDescriptor = transformRuleDescriptor;
 		for (let rresrc in transformRuleDescriptor) {
-			if (logicGetResourceDefinition(rresrc).isInteger) {
-				this.#integerQuantityResourcesPresent = true;
-				break;
+			let resource = logicGetResourceDefinition(rresrc);
+			if (resource) {
+				if (resource.isInteger) {
+					this.#integerQuantityResourcesPresent = true;
+					break;
+				}
+			}
+			else {
+				console.error("Resource with name "+rresrc+" is not found");
 			}
 		}
 	}

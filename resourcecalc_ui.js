@@ -20,7 +20,8 @@ function loadParsedResourcesState(resourcesState) {
 	const ownResources = resourcesState.own;
 	const transformPoints = resourcesState.transformPoints;
 	for (let resourceName in resourceDefinitions) {
-		addResourceDefinition(null, resourceName, resourceDefinitions[resourceName].displayName, resourceDefinitions[resourceName].isInteger, resourceDefinitions[resourceName].additionalData);
+		let resourceDefinition = resourceDefinitions[resourceName];
+		addResourceDefinition(null, resourceName, resourceDefinition.displayName, resourceDefinition.isInteger, resourceDefinition.preferenceIndex, resourceDefinition.additionalData);
 	}
 	for (let resourceName in ownResources) {
 		addOwnResource(null, resourceName, ownResources[resourceName]);
@@ -46,7 +47,7 @@ function addButtonUIControl(parentToAdd, eventHandlerOnClick, displayName) {
 	return buttonElement;
 }
 
-function addCheckboxUIControl(parentToAdd, type, name, displayName, defaultIsChecked) {
+function addCheckboxUIControl(parentToAdd, type, name, displayName, defaultIsChecked, onChangeListener) {
 	let label = document.createElement("label");
 	label.innerText = displayName;
 	let input = document.createElement("input");
@@ -59,6 +60,9 @@ function addCheckboxUIControl(parentToAdd, type, name, displayName, defaultIsChe
 	}
 	if ((defaultIsChecked === true) || (defaultIsChecked === false)) {
 		input.checked = defaultIsChecked;
+	}
+	if (onChangeListener) {
+		input.addEventListener("change", onChangeListener);
 	}
 	label.appendChild(input);
 	parentToAdd.appendChild(label);
@@ -182,7 +186,7 @@ function onDefinitionResourceNameChange(event) {
 		let resNameElement = containerElement.querySelectorAll('[inputType="resName"]')[0];
 		let resDisplayNameElement = containerElement.querySelectorAll('[inputType="resDisplayName"]')[0];
 		if (resNameElement.reportValidity() && resDisplayNameElement.reportValidity() && (Object.is(resNameElement, this) || Object.is(resDisplayNameElement, this))) {
-			setResourceOptionForAllInputs(i, this.value, resDisplayNameElement.value);
+			setResourceOptionForAllInputs(i, resNameElement.value, resDisplayNameElement.value);
 			break;
 		}
 	}
@@ -252,7 +256,7 @@ function onResourceIsIntegerChange(event) {
 	return true;
 }
 
-function addResourceDefinition(event, resourceName, resourceDisplayName, resourceIsInteger, additionalData) {
+function addResourceDefinition(event, resourceName, resourceDisplayName, resourceIsInteger, preferenceIndex, additionalData) {
 	let appendTo = document.getElementById("resourcesDefinitions");
 	let resourceInputArea = document.createElement("div");
 	resourceInputArea.setAttribute("inputType", "resourceElement");
@@ -278,14 +282,16 @@ function addResourceDefinition(event, resourceName, resourceDisplayName, resourc
 		inputResDisplayName.value = resourceDisplayName;
 	}
 	labelResDisplayName.appendChild(inputResDisplayName);
-	let labelResCountIsInteger = document.createElement("label");
-	let inputResCountIsInteger = document.createElement("input");
-	inputResCountIsInteger.type = "checkbox";
-	inputResCountIsInteger.setAttribute("inputType", "resCountIsInteger");
-	labelResCountIsInteger.appendChild(inputResCountIsInteger);
-	let labelSpan = document.createElement("span");
-	labelSpan.innerText = " Количество ресурса измеряется только в целочисленных единицах";
-	labelResCountIsInteger.appendChild(labelSpan);
+
+	let labelResPreferenceIndex = document.createElement("label");
+	labelResPreferenceIndex.innerText = "Предпочтительность ресурса:"
+	let inputResPreferenceIndex = document.createElement("input");
+	inputResPreferenceIndex.type = "number";
+	inputResPreferenceIndex.step = 1;
+	inputResPreferenceIndex.required = true;
+	inputResPreferenceIndex.value = preferenceIndex;
+	inputResPreferenceIndex.setAttribute("inputType", "resPreferenceIndex");
+	labelResPreferenceIndex.appendChild(inputResPreferenceIndex);
 
 	let buttonDelRes = document.createElement("button");
 	buttonDelRes.innerText = "Удалить";
@@ -295,21 +301,20 @@ function addResourceDefinition(event, resourceName, resourceDisplayName, resourc
 	resourceInputArea.appendChild(document.createElement("hr"));
 	resourceInputArea.appendChild(labelResName);
 	resourceInputArea.appendChild(labelResDisplayName);
-	resourceInputArea.appendChild(buttonDelRes);
 	resourceInputArea.appendChild(document.createElement("br"));
-	resourceInputArea.appendChild(labelResCountIsInteger);
+	if (resourceIsInteger === undefined) {
+		resourceIsInteger = true;
+	}
+	addCheckboxUIControl(resourceInputArea, "resCountIsInteger", "", " Количество ресурса измеряется только в целочисленных единицах", resourceIsInteger, onResourceIsIntegerChange);
+	resourceInputArea.appendChild(document.createElement("br"));
+	resourceInputArea.appendChild(labelResPreferenceIndex);
+	resourceInputArea.appendChild(document.createElement("br"));
+	resourceInputArea.appendChild(buttonDelRes);
 	resourceInputArea.appendChild(document.createElement("hr"));
 	if ((appendTo == null) && (event != null)) {
 		appendTo = event.target.parentElement;
 	}
 	appendTo.appendChild(resourceInputArea);
-	inputResCountIsInteger.addEventListener("change", onResourceIsIntegerChange);
-	if (resourceIsInteger !== undefined) {
-		inputResCountIsInteger.checked = resourceIsInteger;
-	}
-	else {
-		inputResCountIsInteger.checked = true;
-	}
 	addResourceDescriptorOption();
 	return true;
 }
@@ -441,11 +446,13 @@ function deleteParentBlock(event) {
 function getResourceDefinitionsFromUI() {
 	let resourceDefinitionsElementsList = document.getElementById("resourcesDefinitions").querySelectorAll("div[inputType='resourceElement']");
 	for (let i = 0; i < resourceDefinitionsElementsList.length; i++) {
-		let resNameElement = resourceDefinitionsElementsList[i].querySelectorAll("label > input[inputType='resName']")[0];
-		let resDisplayNameElement = resourceDefinitionsElementsList[i].querySelectorAll("label > input[inputType='resDisplayName']")[0];
-		let resCountIsIntegerElement = resourceDefinitionsElementsList[i].querySelectorAll("label > input[inputType='resCountIsInteger']")[0];
+		let resourceDefinitionElement = resourceDefinitionsElementsList[i];
+		let resNameElement = resourceDefinitionElement.querySelectorAll("label > input[inputType='resName']")[0];
+		let resDisplayNameElement = resourceDefinitionElement.querySelectorAll("label > input[inputType='resDisplayName']")[0];
+		let resCountIsIntegerElement = resourceDefinitionElement.querySelectorAll("label > input[inputType='resCountIsInteger']")[0];
+		let resPreferenceIndexElement = resourceDefinitionElement.querySelectorAll("label > input[inputType='resPreferenceIndex']")[0];
 		if (resNameElement.reportValidity()) {
-			logicSetResourceDefinition(new Resource(resNameElement.value, resCountIsIntegerElement.checked, resDisplayNameElement.value));
+			logicSetResourceDefinition(new Resource(resNameElement.value, resCountIsIntegerElement.checked, parseInt(resPreferenceIndexElement.value), resDisplayNameElement.value));
 		}
 	}
 }
@@ -488,8 +495,9 @@ function getTransformPointsFromUI() {
 				let inputTpointCanExchange = transformPointRule.querySelectorAll("input[inputType='ruleCanExchange']")[0];
 				let inputApplyMultiplierToSuccessProbability = transformPointRule.querySelectorAll("input[inputType='applyMultiplierToSuccessProbability']")[0];
 				for (let k = 0; k < transformRuleResourcesElementList.length; k++) {
-					let resNameElement = transformRuleResourcesElementList[k].querySelectorAll("select[inputType='resName']")[0];
-					let resCountElement = transformRuleResourcesElementList[k].querySelectorAll("input[inputType='resCount']")[0];
+					let transformRuleResourcesElement = transformRuleResourcesElementList[k];
+					let resNameElement = transformRuleResourcesElement.querySelectorAll("select[inputType='resName']")[0];
+					let resCountElement = transformRuleResourcesElement.querySelectorAll("input[inputType='resCount']")[0];
 					if (resNameElement.reportValidity() && resCountElement.reportValidity()) {
 						let resCount = 0;
 						if (resCountElement.step < 1) {
@@ -536,7 +544,6 @@ function exportInputDataToJSON(event) {
 		"own": logicGetOwnResources(),
 		"transformPoints": logicGetTransformPoints()		
 	});
-	//this.href = data:application/json;
 	this.href = window.URL.createObjectURL(new Blob([stringifiedJSON], {type: 'application/json'}));
 	this.download = "resourcesInputData.json";
 	logicClearAll();
